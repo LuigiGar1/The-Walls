@@ -5,9 +5,9 @@ namespace Walls;
      * This place is for placing 'use' code
      * (But I don't know to use which!!= =)
      */
-use pocketmine\tile\Sign //Process Sign Text
+use pocketmine\tile\Sign;                    //Process Sign Text
 use pocketmine\plugin\PluginBase; //???
-use pocketmine\level\format\SimpleChunk //Process spawn location (X,Y,Z）
+use pocketmine\level\format\SimpleChunk; //Process spawn location (X,Y,Z）
 use pocketmine\command\Command; //Get command(Maybe?)
 use pocketmine\command\CommandExecutor; //Run the command
 use pocketmine\command\CommandSender; //??Maybe the same as Command Executor
