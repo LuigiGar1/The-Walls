@@ -5,6 +5,7 @@ namespace Walls;
      * This place is for placing 'use' code
      * (But I don't know to use which!!= =)
      */
+use pocketmine\Server;
 use pocketmine\tile\Sign;                    //Process Sign Text
 use pocketmine\plugin\PluginBase; //???
 use pocketmine\level\format\SimpleChunk; //Process spawn location (X,Y,Z）
@@ -14,7 +15,7 @@ use pocketmine\command\CommandSender; //??Maybe the same as Command Executor
 use pocketmine\event\block\BlockBreakEvent; //Maybe the player will break the bedrock before killing time starts.Use this to prevent it(Event)
 use pocketmine\event\player\PlayerDeathEvent; //Process when the players were killed(Nevertheless,it can prevent players from killing by others before killing time starts)
 use pocketmine\event\entity\EntityMoveEvent; //Prevent players from entering to other groups before killing time starts
-use pocketmine\event\entity\EntityTeleportEvent; //Prevent op from tping to other groups before killing time starts
+use pocketmine\event\entity\EntityTeleportEvent; //Prevent op from tping to other groups before killing time starts(MAY NOT WORK!)
 use pocketmine\event\player\PlayerCommandPreprocessEvent; //Process the command before it runs in order to prevent players doing sth. nasty
 use pocketmine\event\player\PlayerGameModeChangeEvent; //Prevent players changes GameMode when in gaming
 use pocketmine\event\player\PlayerQuitEvent; //Process sth. when players quit in gaming
@@ -76,6 +77,8 @@ use pocketmine\inventory\CraftingManager;
 class Main extends PluginBase implements Listener, CommandExecutor{
     //This is where the program begins
     protected $joinedplayers=array();
+    protected $sign;
+    protected $gamemanager=array();
     //protected $sign;
 
     public function onEnable(){
@@ -103,14 +106,24 @@ class Main extends PluginBase implements Listener, CommandExecutor{
             case "wallsArmor":
                 if($sender instanceof Player){
                     if($args[0]="chain"){
-                        $sender->
+
                     }
+                    //Needs Analysis
                 }
                 else{
                     $sender->sendMessage(TextFormat::RED . "[Walls]Please run the command in game");
                 }
                 break;
             case "wallsBuildArena":
+                if($sender instanceof Player){
+                    if($args[0]="chain"){
+
+                    }
+                    //Needs Analysis
+                    else{
+                        $sender->sendMessage(TextFormat::RED . "[Walls]Please run the command in game");
+                    }
+                }
                 break;
             case "wallFall":
                 break;
@@ -143,7 +156,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
 
         }
     }
-    public function playerBlockTouch(PlayerInteractEvent $event){
+    public function playerBlockTouch(PlayerInteractEvent $event){//Touch the sign
         //When players touched the sign it called
         $player = $event->getPlayer();
         $playername=$player->getDisplayName();
@@ -180,6 +193,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                     //type codes(Join the game)
                 }
 
+
             }
             else if($block ===27 || $block===54 || $block ===2 || $block === 70){
                 /*if(isset($joinedplayers[$player])){
@@ -205,4 +219,25 @@ class Main extends PluginBase implements Listener, CommandExecutor{
             }
         }
 }
+    public function playerDestroyBloks(BlockBreakEvent $event){
+        $player=$event->getPlayer();
+        $playername=$player->getName();
+        $block=$event->getBlock()->getID();
+        if(isset($block)){
+            if($block == 323 || $block == 63 || $block == 68){
+                $x=$event->getBlock()->getX();
+                $y=$event->getBlock()->getY();
+                $z=$event->getBlock()->getZ();
+                $world=$event->getBlock()->getLevel();
+                $allstring = $x.":".$y.":".$z.":".$world;
+                if($this->sign->exists($allstring)){
+                    if($player->isOp()){
+                        if($this->gamemanager[])
+                        Server::getInstance()->broadcastMessage("[Walls]OP ".$playername."has destroyed the sign which in the world ".$world."in (".$x.",".$y.",".$z.").");
+                    }
+                }
+            }
+        }
+    }
+
 }
