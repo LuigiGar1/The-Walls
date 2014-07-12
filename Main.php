@@ -80,6 +80,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
     protected $joinedplayers=array();
     protected $sign;
     protected $gamemanager=array();
+    //protected $timer;
     /*
  *             ∧
  *            /  \
@@ -102,6 +103,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
     public function onEnable(){
         //Run codes while the plugin are getting ready
         $this->getServer()->getPluginManager()->registerEvents($this, $this);//Maybe it registers events?=_=
+        $this->getServer()->getScheduler()->scheduleRepeatingTask($this->timer, 1800);
         $this->sign= new Config("./plugins/The walls/sign.yml", Config::YAML);
         $this->getLogger()->info("[Walls]Init Successfully！");
 
@@ -326,6 +328,15 @@ class Main extends PluginBase implements Listener, CommandExecutor{
     public function wallFall(int $gameid){
         if($this->gamemanager[$gameid]==0){
             Server::getInstance()->broadcastMessage("[Walls]Error!The game id".$gameid."didn't seem like to be running!");
+        }
+    }
+    public function onGameModeChange(PlayerGameModeChangeEvent $event){
+        $playerName=$event->getPlayer()->getName();
+        foreach($this->joinedplayers as $key=>$value){
+            if($key==$playerName){
+                $event->getPlayer()->sendMessage("What are you going to do?=_=Be good buys!");
+                $event->setCancelled();
+            }
         }
     }
 }
