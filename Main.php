@@ -22,6 +22,7 @@ use pocketmine\event\player\PlayerQuitEvent; //Process sth. when players quit in
 use pocketmine\event\player\PlayerRespawnEvent; //Prevent players from entering gaming places again
 use pocketmine\event\player\PlayerInteractEvent; //Touch signs
 use pocketmine\utils\TextFormat; //Change the colour
+use pocketmine\inventory\PlayerInventory; //Change the players' armors
 use pocketmine\math\Vector3; //Use to tp
 use pocketmine\command\ConsoleCommandSender;
 //use pocketmine\command\ConsoleCommandExecutor;
@@ -43,7 +44,7 @@ use pocketmine\utils\Config; //Config File
 use pocketmine\event\block\BlockPlaceEvent;
 //use pocketmine\math\Vector3;
 //use pocketmine\utils\Config;
-use pocketmine\inventory\PlayerInventory;
+//use pocketmine\inventory\PlayerInventory;
 use pocketmine\event\Event;
 //use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\item\Item;
@@ -79,6 +80,21 @@ class Main extends PluginBase implements Listener, CommandExecutor{
     protected $joinedplayers=array();
     protected $sign;
     protected $gamemanager=array();
+    /*
+ *             ∧
+ *            /  \
+ *           /    \    .
+ *          /      \
+ *         /  |▔|  \
+ *        /   |  |   \
+ *       /    |  |    \
+ *      /     |▁|     \
+ *     /       __       \
+ *    /       |__|       \
+ *   /                    \
+ *  ------------------------
+ * 1.$gamemanager[$gameid]=array(<countgreen>,<countyellow>,<countred>,<countblue>,<started?[true=1,false=2]>,<GetReady?[true=1,false=2]>);
+ */
     //protected $sign;
 
     public function onEnable(){
@@ -96,7 +112,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
             case "wall":
                 if($sender instanceof Player){
                     //Get whether the user is console or not
-                    $sender->sendMessage(TextFormat::RED . "[Walls]The Walls is running...");
+                    $sender->sendMessage("[Walls]The Wall is running...");
                 }
                 else{
                     $sender->sendMessage(TextFormat::RED . "[Walls]Please run the command in game");
@@ -105,8 +121,31 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                 break;
             case "wallsArmor":
                 if($sender instanceof Player){
-                    if($args[0]="chain"){
-
+                    if(isset($args[0])){
+                        $sender->sendMessage(TextFormat::RED . "Usage:/wallsArmor <type>");
+                    }
+                    else{
+                        if($args[0]="chain"){
+                            //$player=$sender->getPlayer();
+                            $apple[]=new Item(302,303,304,305);
+                            $sender->getInventory()->setArmorContents($apple);
+                        }
+                        else if($args[0]="leather"){
+                            $apple[]=new Item(298,299,300,301);
+                            $sender->getInventory()->setArmorContents($apple);
+                        }
+                        else if($args[0]="gold"){
+                            $apple[]=new Item(314,315,316,317);
+                            $sender->getInventory()->setArmorContents($apple);
+                        }
+                        else if($args[0]="iron"){
+                            $apple[]=new Item(306,307,308,309);
+                            $sender->getInventory()->setArmorContents($apple);
+                        }
+                        else if($args[0]="diamond"){
+                            $apple[]=new Item(310,311,312,313);
+                            $sender->getInventory()->setArmorContents($apple);
+                        }
                     }
                     //Needs Analysis
                 }
@@ -159,7 +198,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
     public function playerBlockTouch(PlayerInteractEvent $event){//Touch the sign
         //When players touched the sign it called
         $player = $event->getPlayer();
-        $playername=$player->getDisplayName();
+        $playerName=$player->getName();
         $block = $event->getBlock()->getID();
         if (isset($block)) {
             if($block == 323 || $block == 63 || $block == 68){
@@ -167,12 +206,20 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                 $y= $event->getBlock()->getY();
                 $z= $event->getBlock()->getZ();
                 //Get Sign ID
-                $world = $event->getBlock()->getLevel();
+                $world = $event->getBlock()->getLevel()->getName();
                 $allstring = $x.":".$y.":".$z.":".$world;
                 if($this->sign->exists($allstring)){
-                    $player->sendMessage("You have joined the game.Please place the block in order to choose group.");
-                    $this->joinedplayers[$playername]=array(0,0,0,0);
-                    //$player->teleport()//TP COMMAND!!!!!!
+                    if($player->gamemode!=0){
+                        $player->sendMessage("You can't join the game due to gamemode.");
+                    }
+                    else{
+                        $gameid=$this->sign->get($allstring)['gameid'];
+                        $location=new Vector3($this->sign->get($allstring)['startX'],$this->sign->get($allstring)['startY'],$this->sign->get($allstring)['startZ']);
+                        $player->sendMessage("You have joined the game.Please place the block in order to choose group.");
+                        $player->getInventory()->clearAll();
+                        $player->getInventory()->addItem(19,45,2,57);
+                        $this->joinedplayers[$playerName]=array('GroupID'=>0,'SignID'=>0,'GameID'=>$gameid,'Killed'=>0,'Quited'=>0,'Ready'=>1);
+                        $player->teleport($location);//TP COMMAND!!!!!!
 
      /*
      *             ∧
@@ -187,57 +234,87 @@ class Main extends PluginBase implements Listener, CommandExecutor{
      *    /       |__|       \
      *   /                    \
      *  ------------------------
-     * 1.Need MODIFY!$joinedplayers[<player>]=array(<Group ID>,<Sign ID>,<Killed?[true=1,false=0]>,<Quit?[true=1,false=0]>)
+     * 1.Need MODIFY!$joinedplayers[<player>]=array(<Group ID>,<Sign ID>,<Killed?[true=1,false=0]>,<Quit?[true=1,false=0]>,<Ready?[FullyTrue=2,true=1,false=0]>)
       * 2.plugin main area!Coding carefully!
      */
                     //type codes(Join the game)
                 }
-
+                }
 
             }
-            else if($block ===27 || $block===54 || $block ===2 || $block === 70){
-                /*if(isset($joinedplayers[$player])){
-
-                }*/
+            }
+        }
+    public function onBlockPlace(BlockPlaceEvent $event){
+        $player=$event->getPlayer();
+    $playerName=$player->getName();
+        $block=$event->getBlock()->getID();
+        $x= $event->getBlock()->getX();
+        $y= $event->getBlock()->getY();
+        $z= $event->getBlock()->getZ();
+        $world = $event->getBlock()->getLevel()->getName();
+        $allString = $x.":".$y.":".$z.":".$world;
+        $gameID=$this->sign->get($allString)['gameid'];
+        if (isset($blockid)) {
+            if($block ===19 || $block===45 || $block ===2 || $block === 57){
                 foreach($this->joinedplayers as $key=>$value){
                     if(strcmp($key,$player)==0){
-                        $this->joinedplayers[$playername]=array($block,0,0,0);
-                        if($block ===27){
-                        $player->sendMessage(TextFormat::YELLOW,"[Walls]You have joined YELLOW Group");
-                    }
-                        else if($block ===54){
+                        //$blockid=$event->getBlock();
+                        $this->joinedplayers[$playerName]=array('GroupID'=>$block,'SignID'=>0,'GameID'=>$gameID,'Killed'=>0,'Quited'=>0,'Ready'=>2);
+                        if($block ===19){
+                            //if($this->gamemanager[])
+                                $player->sendMessage(TextFormat::YELLOW,"[Walls]You have joined YELLOW Group");
+                            $event->setCancelled();
+                            //$blockid->onBreak();
+                        }
+                        else if($block ===45){
                             $player->sendMessage(TextFormat::RED,"[Walls]You have joined RED Group");
+                            $event->setCancelled();
                         }
                         else if($block === 2){
                             $player->sendMessage(TextFormat::GREEN,"[Walls]You have joined GREEN Group");
+                            $event->setCancelled();
                         }
                         else{
                             $player->sendMessage(TextFormat::BLUE,"[Walls]You have joined BLUE Group");
+                            $event->setCancelled();
                         }
                     }
                 }
-            }
         }
-}
-    public function playerDestroyBloks(BlockBreakEvent $event){
+
+        }
+    }
+    public function playerDestroyBlocks(BlockBreakEvent $event){
         $player=$event->getPlayer();
         $playername=$player->getName();
         $block=$event->getBlock()->getID();
         if(isset($block)){
+            foreach($this->joinedplayers as $key=>$id){
+                if($playername==$key){
+                    if($this->joinedplayers[$playername]['Ready']==1 or 2){
+                        $event->setCancelled();
+                    }
+                }
+            }
             if($block == 323 || $block == 63 || $block == 68){
                 $x=$event->getBlock()->getX();
                 $y=$event->getBlock()->getY();
                 $z=$event->getBlock()->getZ();
-                $world=$event->getBlock()->getLevel();
+                $world=$event->getBlock()->getLevel()->getName();
                 $allstring = $x.":".$y.":".$z.":".$world;
                 if($this->sign->exists($allstring)){
                     if($player->isOp()){
-                        if($this->gamemanager[])
-                        Server::getInstance()->broadcastMessage("[Walls]OP ".$playername."has destroyed the sign which in the world ".$world."in (".$x.",".$y.",".$z.").");
+
+                        //if($this->gamemanager[])
+                        Server::getInstance()->broadcastMessage("[Walls]OP ".$playername."has destroyed the sign which in the world ".$world." in (".$x.",".$y.",".$z.").");
                     }
                 }
             }
         }
     }
-
+    public function wallFall(int $gameid){
+        if($this->gamemanager[$gameid]==0){
+            Server::getInstance()->broadcastMessage("[Walls]Error!The game id".$gameid."didn't seem like to be running!");
+        }
+    }
 }
