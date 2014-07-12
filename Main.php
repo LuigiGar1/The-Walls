@@ -93,9 +93,11 @@ class Main extends PluginBase implements Listener, CommandExecutor{
  *    /       |__|       \
  *   /                    \
  *  ------------------------
- * 1.$gamemanager[$gameid]=array(<countgreen>,<countyellow>,<countred>,<countblue>,<started?[true=1,false=2]>,<GetReady?[true=1,false=2]>);
+ * 1.$gamemanager[$gameid]=array(<countgreen>,<countyellow>,<countred>,<countblue>,<Mining?[true=1,false=0]>,<GetReady?[true=1,false=0]>);
+ * 2.Need MODIFY!$joinedplayers[<player>]=array(<Group ID>,<Game ID>,<Killed?[true=1,false=0]>,<Quit?[true=1,false=0]>,<Ready?[FullyTrue=2,true=1,false=0]>)
  */
     //protected $sign;
+
 
     public function onEnable(){
         //Run codes while the plugin are getting ready
@@ -155,11 +157,12 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                 break;
             case "wallsBuildArena":
                 if($sender instanceof Player){
-                    
+
                     //Needs Analysis
-                    else{
-                        $sender->sendMessage(TextFormat::RED . "[Walls]Please run the command in game");
-                    }
+
+                }
+                else{
+                    $sender->sendMessage(TextFormat::RED . "[Walls]Please run the command in game");
                 }
                 break;
             case "wallFall":
@@ -206,36 +209,24 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                 //Get Sign ID
                 $world = $event->getBlock()->getLevel()->getName();
                 $allstring = $x.":".$y.":".$z.":".$world;
+                $gameid=$this->sign->get($allstring)['gameid'];
                 if($this->sign->exists($allstring)){
+                    if($this->gamemanager[$gameid]['started']==1){
+                        $player->sendMessage("The game is running!Please come again when it stops!");
+                    }
+                    else{
                     if($player->gamemode!=0){
                         $player->sendMessage("You can't join the game due to gamemode.");
                     }
                     else{
-                        $gameid=$this->sign->get($allstring)['gameid'];
                         $location=new Vector3($this->sign->get($allstring)['startX'],$this->sign->get($allstring)['startY'],$this->sign->get($allstring)['startZ']);
                         $player->sendMessage("You have joined the game.Please place the block in order to choose group.");
                         $player->getInventory()->clearAll();
                         $player->getInventory()->addItem(19,45,2,57);
-                        $this->joinedplayers[$playerName]=array('GroupID'=>0,'SignID'=>0,'GameID'=>$gameid,'Killed'=>0,'Quited'=>0,'Ready'=>1);
+                        $this->joinedplayers[$playerName]=array('GroupID'=>0,'GameID'=>$gameid,'Killed'=>0,'Quited'=>0,'Ready'=>1);
                         $player->teleport($location);//TP COMMAND!!!!!!
-
-     /*
-     *             ∧
-     *            /  \
-     *           /    \    .
-     *          /      \
-     *         /  |▔|  \
-     *        /   |  |   \
-     *       /    |  |    \
-     *      /     |▁|     \
-     *     /       __       \
-     *    /       |__|       \
-     *   /                    \
-     *  ------------------------
-     * 1.Need MODIFY!$joinedplayers[<player>]=array(<Group ID>,<Sign ID>,<Killed?[true=1,false=0]>,<Quit?[true=1,false=0]>,<Ready?[FullyTrue=2,true=1,false=0]>)
-      * 2.plugin main area!Coding carefully!
-     */
-                    //type codes(Join the game)
+                        $this->gamemanager[$gameid]['ready']==1;
+                }
                 }
                 }
 
@@ -257,7 +248,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                 foreach($this->joinedplayers as $key=>$value){
                     if(strcmp($key,$player)==0){
                         //$blockid=$event->getBlock();
-                        $this->joinedplayers[$playerName]=array('GroupID'=>$block,'SignID'=>0,'GameID'=>$gameID,'Killed'=>0,'Quited'=>0,'Ready'=>2);
+                        $this->joinedplayers[$playerName]=array('GroupID'=>$block,'GameID'=>$gameID,'Killed'=>0,'Quited'=>0,'Ready'=>2);
                         if($block ===19){
                             //if($this->gamemanager[])
                                 $player->sendMessage(TextFormat::YELLOW,"[Walls]You have joined YELLOW Group");
@@ -299,14 +290,36 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                 $y=$event->getBlock()->getY();
                 $z=$event->getBlock()->getZ();
                 $world=$event->getBlock()->getLevel()->getName();
-                $allstring = $x.":".$y.":".$z.":".$world;
-                if($this->sign->exists($allstring)){
+                $allString = $x.":".$y.":".$z.":".$world;
+                $gameID=$this->sign->get($allString)['gameid'];
+                if($this->sign->exists($allString)){
                     if($player->isOp()){
+                        if($this->gamemanager[$gameID]['mining']==1 or $this->gamemanager[$gameID]['ready']==1){
+                            $player->sendMessage("The game has been already running/ready!Please retry after game stops!");
+                        }
+                        else{
+                            unset($this->gamemanager[$gameID]);
+                            $this->sign->remove[allString];
+                            //Remove sign
+                            Server::getInstance()->broadcastMessage("[Walls]OP ".$playername."has destroyed the sign which in the world ".$world." in (".$x.",".$y.",".$z.").");
+                        }
 
-                        //if($this->gamemanager[])
-                        Server::getInstance()->broadcastMessage("[Walls]OP ".$playername."has destroyed the sign which in the world ".$world." in (".$x.",".$y.",".$z.").");
                     }
-                }
+                }/*
+ *             ∧
+ *            /  \
+ *           /    \    .
+ *          /      \
+ *         /  |▔|  \
+ *        /   |  |   \
+ *       /    |  |    \
+ *      /     |▁|     \
+ *     /       __       \
+ *    /       |__|       \
+ *   /                    \
+ *  ------------------------
+ * 1.Don't forget to prevent players from breaking the walls during minging time.
+*/
             }
         }
     }
