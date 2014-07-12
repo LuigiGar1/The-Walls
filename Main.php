@@ -155,9 +155,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                 break;
             case "wallsBuildArena":
                 if($sender instanceof Player){
-                    if($args[0]="chain"){
-
-                    }
+                    
                     //Needs Analysis
                     else{
                         $sender->sendMessage(TextFormat::RED . "[Walls]Please run the command in game");
