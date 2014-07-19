@@ -25,7 +25,6 @@ use pocketmine\utils\TextFormat; //Change the colour
 use pocketmine\inventory\PlayerInventory; //Change the players' armors
 use pocketmine\math\Vector3; //Use to tp
 use pocketmine\command\ConsoleCommandSender;
-//use pocketmine\command\ConsoleCommandExecutor;
 use pocketmine\event\Listener; //Listen to event
 use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\level\Level;
@@ -33,31 +32,15 @@ use pocketmine\level\Position;
 use pocketmine\entity\Entity;
 use pocketmine\Player; //IMPORTANT!
 use pocketmine\utils\Config; //Config File
-//use pocketmine\command\Command;
-//use pocketmine\event\Listener;
-//use pocketmine\Player;
-//use pocketmine\plugin\PluginBase;
-//use pocketmine\Server;
-//use pocketmine\utils\TextFormat;
-//use pocketmine\event\player\PlayerJoinEvent;
-//use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\block\BlockPlaceEvent;
-//use pocketmine\math\Vector3;
-//use pocketmine\utils\Config;
-//use pocketmine\inventory\PlayerInventory;
 use pocketmine\event\Event;
-//use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\item\Item;
-//use pocketmine\tile\Sign;
 use pocketmine\nbt\tag\Compound;
 use pocketmine\nbt\tag\String;
 use pocketmine\nbt\tag\Int;
 use pocketmine\tile\Tile;
-//use pocketmine\level\Level;
 use pocketmine\item\Block;
-//use PocketMoney\PocketMoneyAPI;
 use pocketmine\utils\Utils;
-//use pocketmine\event\player\PlayerRespawnEvent;
 use pocketmine\inventory\CraftingManager;
 /*
  *             ∧
@@ -78,8 +61,9 @@ use pocketmine\inventory\CraftingManager;
 class Main extends PluginBase implements Listener, CommandExecutor{
     //This is where the program begins
     protected $joinedplayers=array();
-    protected $sign;
-    protected $gamemanager=array();
+    protected $sign,$timer;
+    public $gamemanager=array();
+    public $playerQuit=array();
     //protected $timer;
     /*
  *             ∧
@@ -94,8 +78,9 @@ class Main extends PluginBase implements Listener, CommandExecutor{
  *    /       |__|       \
  *   /                    \
  *  ------------------------
- * 1.$gamemanager[$gameid]=array(<countgreen>,<countyellow>,<countred>,<countblue>,<Mining?[true=1,false=0]>,<GetReady?[true=1,false=0]>);
- * 2.Need MODIFY!$joinedplayers[<player>]=array(<Group ID>,<Game ID>,<Killed?[true=1,false=0]>,<Quit?[true=1,false=0]>,<Ready?[FullyTrue=2,true=1,false=0]>)
+ * 1.$gamemanager[$gameid]=array(<countgreen>,<countyellow>,<countred>,<countblue>,<Mining?[true=1,false=0]>,<GetReady?[true=1,false=0]>,<MineLeftTime>,<KillLeftTime>);
+ * 2.Need MODIFY!$joinedplayers[<player>]=array(<Group ID>,<Game ID>,<Killed?[true=1,false=0]>,<Quit?[FullyTrue=2,true=1,false=0]>,<Ready?[FullyTrue=2,true=1,false=0]>)
+ * 3.$playerQuit[<player>]=<QuitTime>
  */
     //protected $sign;
 
@@ -103,6 +88,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
     public function onEnable(){
         //Run codes while the plugin are getting ready
         $this->getServer()->getPluginManager()->registerEvents($this, $this);//Maybe it registers events?=_=
+        $this->timer = new Timer($this);
         $this->getServer()->getScheduler()->scheduleRepeatingTask($this->timer, 1800);
         $this->sign= new Config("./plugins/The walls/sign.yml", Config::YAML);
         $this->getLogger()->info("[Walls]Init Successfully！");
@@ -301,7 +287,7 @@ class Main extends PluginBase implements Listener, CommandExecutor{
                         }
                         else{
                             unset($this->gamemanager[$gameID]);
-                            $this->sign->remove[allString];
+                            $this->sign->remove[$allString];
                             //Remove sign
                             Server::getInstance()->broadcastMessage("[Walls]OP ".$playername."has destroyed the sign which in the world ".$world." in (".$x.",".$y.",".$z.").");
                         }
@@ -325,18 +311,51 @@ class Main extends PluginBase implements Listener, CommandExecutor{
             }
         }
     }
-    public function wallFall(int $gameid){
-        if($this->gamemanager[$gameid]==0){
-            Server::getInstance()->broadcastMessage("[Walls]Error!The game id".$gameid."didn't seem like to be running!");
+    public function wallFall(int $gameID){
+        if($this->gamemanager[$gameID]==0){
+            Server::getInstance()->broadcastMessage("[Walls]Error!The game id".$gameID."didn't seem like to be running!");
         }
     }
     public function onGameModeChange(PlayerGameModeChangeEvent $event){
         $playerName=$event->getPlayer()->getName();
+        //$chunkX=131;
+        //$chunkZ=132;
         foreach($this->joinedplayers as $key=>$value){
             if($key==$playerName){
+                $event->getPlayer()->sendMessage("What are you going to do?=_=Be good buys!");
+                $event->setCancelled();
+                //$rere=new SimpleChunk($chunkX,$chunkZ);
+            }
+        }
+    }
+    public function onRunCMD(PlayerCommandPreprocessEvent $event){
+        if(isset($this->joinedplayers[$event->getPlayer()->getName()])){
+            if($event->getMessage()=="tp" or "kill" or "kick" or "gamemode" or "give"){//more
                 $event->getPlayer()->sendMessage("What are you going to do?=_=Be good buys!");
                 $event->setCancelled();
             }
         }
     }
+    public function onPlayerQuit(PlayerQuitEvent $event){
+        if(isset($this->joinedplayers[$event->getPlayer()->getName()])){
+            $this->playerQuit[$event->getPlayer()->getName()]=0;
+            $this->joinedplayers[$event->getPlayer()->getName()]['Quit']=1;
+        }
+    }
+    public function onPlayerDeath(PlayerDeathEvent $event){
+        if(isset($this->joinedplayers[$event->getEntity()->getName()])){
+            //unset($this->joinedplayers[$event->getEntity()->getName()]);
+            $this->joinedplayers[$event->getEntity()->getName()]['Killed']=1;
+            Server::getInstance()->broadcastMessage("[Walls]Player ".$event->getEntity()->getPlayer()." has been killed!");
+        }
+    }
+    public function onPlayerJoin(PlayerJoinEvent $event){
+        if(isset($this->joinedplayers[$event->getPlayer()->getName()])){
+            if($this->joinedplayers[$event->getPlayer()->getName()]['Quit']==2){
+                $event->getPlayer()->sendMessage("Couldn't connect to the game world.");
+                $this->sign->get();
+            }
+        }
+    }
+
 }
